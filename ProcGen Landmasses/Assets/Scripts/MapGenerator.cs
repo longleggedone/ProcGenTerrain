@@ -7,7 +7,7 @@ public class MapGenerator : MonoBehaviour {
 	public enum DrawMode {NoiseMap, ColorMap, Mesh};
 	public DrawMode drawMode;
 
-	const int mapChunkSize = 241;
+	public const int mapChunkSize = 241;
 	[Range(0,6)]
 	public int levelOfDetail;
 	public float noiseScale;
@@ -27,7 +27,22 @@ public class MapGenerator : MonoBehaviour {
 
 	public TerrainType[] regions;
 
-	public void GenerateMap(){
+	public void DrawMapInEditor(){
+		MapData mapData = GenerateMapData ();
+
+		MapDisplay display = FindObjectOfType<MapDisplay>();
+		if (drawMode == DrawMode.NoiseMap){
+			display.DrawTexture (TextureGenerator.TextureFromHeightMap(mapData.heightMap));
+		}
+		else if (drawMode == DrawMode.ColorMap){
+			display.DrawTexture (TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+		}
+		else if (drawMode == DrawMode.Mesh){
+			display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+		}
+	}
+
+	MapData GenerateMapData(){
 		float[,] noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
 
 		Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
@@ -43,16 +58,7 @@ public class MapGenerator : MonoBehaviour {
 			}
 		}
 
-		MapDisplay display = FindObjectOfType<MapDisplay>();
-		if (drawMode == DrawMode.NoiseMap){
-			display.DrawTexture (TextureGenerator.TextureFromHeightMap(noiseMap));
-		}
-		else if (drawMode == DrawMode.ColorMap){
-			display.DrawTexture (TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
-		}
-		else if (drawMode == DrawMode.Mesh){
-			display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
-		}
+		return new MapData(noiseMap, colorMap);
 	}
 
 	void OnValidate(){
@@ -70,4 +76,16 @@ public struct TerrainType{
 	public string name;
 	public float height;
 	public Color color;
+}
+
+public struct MapData{
+	public float[,] heightMap;
+	public Color[] colorMap;
+
+	public MapData (float[,] heightMap, Color[] colorMap)
+	{
+		this.heightMap = heightMap;
+		this.colorMap = colorMap;
+	}
+	
 }
